@@ -1,0 +1,161 @@
+## Global Variabel
+@BaseUrl = http://127.0.0.1:8000
+
+### ---------------------------------------
+## Auth
+### ---------------------------------------
+
+### Melakukan pendaftaran
+# @name PostRegister
+POST {{BaseUrl}}/auth/register
+Content-Type: application/json
+
+{
+  "name": "Tester",
+  "username": "tester",
+  "password": "tester"
+}
+
+### Masuk ke layanan
+# @name PostLogin
+POST {{BaseUrl}}/auth/login
+Content-Type: application/json
+
+{
+  "username": "tester",
+  "password": "tester"
+}
+
+> {%
+    client.global.set("authToken", response.body.data.authToken);
+    client.global.set("refreshToken", response.body.data.refreshToken);
+%}
+
+### ---------------------------------------
+## Products
+### ---------------------------------------
+
+### Mengambil semua produk
+# @name GetAllProducts
+GET {{BaseUrl}}/products
+Authorization: Bearer {{authToken}}
+
+### Menambahkan produk (Seller)
+# @name PostProduct
+POST {{BaseUrl}}/products
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Laptop Gaming",
+  "description": "High performance laptop",
+  "price": 15000000,
+  "stock": 10,
+  "category": "Electronics",
+  "barcode": "123456789"
+}
+
+> {%
+    client.global.set("productId", response.body.data.id);
+%}
+
+### Mencari produk
+# @name SearchProducts
+GET {{BaseUrl}}/products/search?q=Laptop
+Authorization: Bearer {{authToken}}
+
+### Mengambil produk berdasarkan ID
+# @name GetProductById
+GET {{BaseUrl}}/products/{{productId}}
+Authorization: Bearer {{authToken}}
+
+### Memperbarui produk (Seller)
+# @name PutProduct
+PUT {{BaseUrl}}/products/{{productId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "name": "Laptop Gaming Pro",
+  "description": "Updated description",
+  "price": 16000000,
+  "stock": 5
+}
+
+### Mengambil produk milik penjual saat ini
+# @name GetSellerProducts
+GET {{BaseUrl}}/products/seller/me
+Authorization: Bearer {{authToken}}
+
+### ---------------------------------------
+## Cart
+### ---------------------------------------
+
+### Menambahkan ke keranjang
+# @name PostAddToCart
+POST {{BaseUrl}}/cart
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "productId": "{{productId}}",
+  "quantity": 2
+}
+
+> {%
+    client.global.set("cartId", response.body.data.id);
+%}
+
+### Melihat isi keranjang
+# @name GetCart
+GET {{BaseUrl}}/cart
+Authorization: Bearer {{authToken}}
+
+### Memperbarui jumlah di keranjang
+# @name PutCartQuantity
+PUT {{BaseUrl}}/cart/{{cartId}}
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "quantity": 3
+}
+
+### ---------------------------------------
+## Transactions
+### ---------------------------------------
+
+### Melakukan Checkout
+# @name PostCheckout
+POST {{BaseUrl}}/transactions/checkout
+Authorization: Bearer {{authToken}}
+Content-Type: application/json
+
+{
+  "productId": "{{productId}}",
+  "quantity": 1
+}
+
+### Melihat riwayat transaksi pembeli
+# @name GetBuyerTransactions
+GET {{BaseUrl}}/transactions/buyer
+Authorization: Bearer {{authToken}}
+
+### Melihat pemasukan penjual
+# @name GetSellerIncome
+GET {{BaseUrl}}/transactions/seller/income
+Authorization: Bearer {{authToken}}
+
+### ---------------------------------------
+## Cleanup (Optional)
+### ---------------------------------------
+
+### Menghapus dari keranjang
+# @name DeleteFromCart
+DELETE {{BaseUrl}}/cart/{{cartId}}
+Authorization: Bearer {{authToken}}
+
+### Menghapus produk
+# @name DeleteProduct
+DELETE {{BaseUrl}}/products/{{productId}}
+Authorization: Bearer {{authToken}}
