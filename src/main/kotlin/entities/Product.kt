@@ -9,7 +9,7 @@ import java.util.UUID
 @Serializable
 data class Product(
     var id: String = UUID.randomUUID().toString(),
-    var sellerId: String,
+    var sellerId: String = "",
     var name: String,
     var description: String,
     var price: Double,
