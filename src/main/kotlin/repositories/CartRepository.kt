@@ -11,7 +11,12 @@ import java.util.*
 
 class CartRepository : ICartRepository {
     override suspend fun getByUser(userId: String): List<Cart> = suspendTransaction {
-        CartDAO.find { CartTable.userId eq UUID.fromString(userId) }.map(::cartDAOToModel)
+        try {
+            CartDAO.find { CartTable.userId eq UUID.fromString(userId) }
+                .map { cartDAOToModel(it) }
+        } catch (e: Exception) {
+            emptyList()
+        }
     }
 
     override suspend fun addToCart(cart: Cart): String = suspendTransaction {
