@@ -31,7 +31,7 @@ fun refreshTokenDAOToModel(dao: RefreshTokenDAO) = RefreshToken(
 
 fun productDAOToModel(dao: ProductDAO) = Product(
     id = dao.id.value.toString(),
-    sellerId = dao.sellerId.toString(),
+    sellerId = dao.sellerId.value.toString(),
     name = dao.name,
     description = dao.description,
     price = dao.price,
@@ -46,21 +46,21 @@ fun productDAOToModel(dao: ProductDAO) = Product(
 fun cartDAOToModel(dao: CartDAO): Cart {
     val cart = Cart(
         id = dao.id.value.toString(),
-        userId = dao.userId.toString(),
-        productId = dao.productId.toString(),
+        userId = dao.userId.value.toString(),
+        productId = dao.productId.value.toString(),
         quantity = dao.quantity,
         createdAt = dao.createdAt,
         updatedAt = dao.updatedAt
     )
     
-    // Ambil data produk terkait (JOIN manual)
+    // Ambil data produk terkait menggunakan .value
     try {
-        val productDao = ProductDAO.findById(dao.productId)
+        val productDao = ProductDAO.findById(dao.productId.value)
         if (productDao != null) {
             cart.product = productDAOToModel(productDao)
         }
     } catch (e: Exception) {
-        // Abaikan jika gagal ambil produk
+        println("Error mapping product in cart: ${e.message}")
     }
     
     return cart
@@ -68,8 +68,8 @@ fun cartDAOToModel(dao: CartDAO): Cart {
 
 fun ratingDAOToModel(dao: RatingDAO) = Rating(
     id = dao.id.value.toString(),
-    productId = dao.productId.toString(),
-    userId = dao.userId.toString(),
+    productId = dao.productId.value.toString(),
+    userId = dao.userId.value.toString(),
     score = dao.score,
     comment = dao.comment,
     createdAt = dao.createdAt
@@ -77,9 +77,9 @@ fun ratingDAOToModel(dao: RatingDAO) = Rating(
 
 fun transactionDAOToModel(dao: TransactionDAO) = Transaction(
     id = dao.id.value.toString(),
-    buyerId = dao.buyerId.toString(),
-    sellerId = dao.sellerId.toString(),
-    productId = dao.productId.toString(),
+    buyerId = dao.buyerId.value.toString(),
+    sellerId = dao.sellerId.value.toString(),
+    productId = dao.productId.value.toString(),
     quantity = dao.quantity,
     totalPrice = dao.totalPrice,
     createdAt = dao.createdAt
@@ -87,7 +87,7 @@ fun transactionDAOToModel(dao: TransactionDAO) = Transaction(
 
 fun todoDAOToModel(dao: TodoDAO) = Todo(
     id = dao.id.value.toString(),
-    userId = dao.userId.toString(),
+    userId = dao.userId.value.toString(),
     title = dao.title,
     description = dao.description,
     isDone = dao.isDone,
