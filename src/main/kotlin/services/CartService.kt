@@ -24,13 +24,15 @@ class CartService(
 
     suspend fun addToCart(call: ApplicationCall) {
         val principal = call.principal<JWTPrincipal>()
+        // Mengambil userId dari claim 'userId' sesuai dengan yang ada di AuthService
         val userId = principal?.payload?.getClaim("userId")?.asString() ?: throw AppException(401, "Unauthorized")
         
         val request = call.receive<Cart>()
+        // Memastikan userId diisi dari token, bukan dari body request
         request.userId = userId
         
         val cartId = cartRepository.addToCart(request)
-        call.respond(DataResponse("success", "Berhasil menambah ke keranjang", mapOf("id" to cartId)))
+        call.respond(DataResponse("success", "Berhasil menambah ke keranjang", cartId))
     }
 
     suspend fun updateQuantity(call: ApplicationCall) {
