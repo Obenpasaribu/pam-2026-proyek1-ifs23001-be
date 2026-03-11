@@ -9,9 +9,9 @@ import java.util.UUID
 @Serializable
 data class Cart(
     var id: String = UUID.randomUUID().toString(),
-    var userId: String,
-    var productId: String,
-    var quantity: Int,
+    var userId: String = "",
+    var productId: String = "",
+    var quantity: Int = 1,
     
     @Contextual
     val createdAt: Instant = Clock.System.now(),
