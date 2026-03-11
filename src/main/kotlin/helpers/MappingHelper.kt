@@ -43,14 +43,28 @@ fun productDAOToModel(dao: ProductDAO) = Product(
     updatedAt = dao.updatedAt
 )
 
-fun cartDAOToModel(dao: CartDAO) = Cart(
-    id = dao.id.value.toString(),
-    userId = dao.userId.toString(),
-    productId = dao.productId.toString(),
-    quantity = dao.quantity,
-    createdAt = dao.createdAt,
-    updatedAt = dao.updatedAt
-)
+fun cartDAOToModel(dao: CartDAO): Cart {
+    val cart = Cart(
+        id = dao.id.value.toString(),
+        userId = dao.userId.toString(),
+        productId = dao.productId.toString(),
+        quantity = dao.quantity,
+        createdAt = dao.createdAt,
+        updatedAt = dao.updatedAt
+    )
+    
+    // Ambil data produk terkait (JOIN manual)
+    try {
+        val productDao = ProductDAO.findById(dao.productId)
+        if (productDao != null) {
+            cart.product = productDAOToModel(productDao)
+        }
+    } catch (e: Exception) {
+        // Abaikan jika gagal ambil produk
+    }
+    
+    return cart
+}
 
 fun ratingDAOToModel(dao: RatingDAO) = Rating(
     id = dao.id.value.toString(),

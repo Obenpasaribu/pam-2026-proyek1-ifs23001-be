@@ -13,6 +13,9 @@ data class Cart(
     var productId: String = "",
     var quantity: Int = 1,
     
+    // Tambahkan ini agar detail produk ikut terkirim ke Android
+    var product: Product? = null,
+    
     @Contextual
     val createdAt: Instant = Clock.System.now(),
     @Contextual
