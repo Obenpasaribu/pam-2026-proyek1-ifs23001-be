@@ -5,6 +5,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.auth.*
 import io.ktor.server.auth.jwt.*
+import kotlinx.serialization.Serializable
 import org.delcom.data.AppException
 import org.delcom.data.DataResponse
 import org.delcom.entities.Transaction
@@ -13,6 +14,11 @@ import org.delcom.repositories.ITransactionRepository
 import org.delcom.repositories.IProductRepository
 import org.delcom.repositories.IUserRepository
 import java.util.*
+
+@Serializable
+data class DepositRequest(
+    val amount: Double
+)
 
 class TransactionService(
     private val transactionRepository: ITransactionRepository,
@@ -63,15 +69,26 @@ class TransactionService(
 
     suspend fun deposit(call: ApplicationCall) {
         val user = ServiceHelper.getAuthUser(call, userRepository)
-        val request = call.receive<Map<String, Double>>()
-        val amount = request["amount"] ?: throw AppException(400, "Jumlah deposit diperlukan")
         
-        if (amount <= 0) throw AppException(400, "Jumlah harus lebih dari 0")
+        // Menggunakan Data Class untuk menghindari error casting Map
+        val request = try {
+            call.receive<DepositRequest>()
+        } catch (e: Exception) {
+            throw AppException(400, "Format jumlah deposit tidak valid")
+        }
         
+        val amount = request.amount
+        if (amount <= 0) throw AppException(400, "Jumlah deposit harus lebih dari 0")
+        
+        // Update Saldo
         user.balance += amount
-        userRepository.update(user.id, user)
+        val isUpdated = userRepository.update(user.id, user)
         
-        call.respond(DataResponse("success", "Berhasil melakukan deposit Rp $amount", null))
+        if (!isUpdated) {
+            throw AppException(500, "Gagal memperbarui saldo di database")
+        }
+        
+        call.respond(DataResponse("success", "Berhasil melakukan deposit sebesar Rp $amount", null))
     }
 
     suspend fun getBuyerTransactions(call: ApplicationCall) {
