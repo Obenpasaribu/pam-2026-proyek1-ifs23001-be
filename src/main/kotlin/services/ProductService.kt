@@ -1,5 +1,6 @@
 package org.delcom.services
 
+import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -21,34 +22,34 @@ class ProductService(
     private val productRepository: IProductRepository
 ) {
     suspend fun getAllProducts(call: ApplicationCall) {
-        val products = productRepository.getAll().map { it.withFullImageUrl(call) }
-        call.respond(DataResponse("success", "Berhasil mengambil produk", products))
+        val products = productRepository.getAll().map { it.withImageUrl(call) }
+        call.respond(DataResponse("success", "Berhasil mengambil produk", mapOf("products" to products)))
     }
 
     suspend fun getProductById(call: ApplicationCall) {
         val id = call.parameters["id"] ?: throw AppException(400, "ID produk diperlukan")
-        val product = productRepository.getById(id)?.withFullImageUrl(call) ?: throw AppException(404, "Produk tidak ditemukan")
-        call.respond(DataResponse("success", "Berhasil mengambil produk", product))
+        val product = productRepository.getById(id)?.withImageUrl(call) ?: throw AppException(404, "Produk tidak ditemukan")
+        call.respond(DataResponse("success", "Berhasil mengambil produk", mapOf("product" to product)))
     }
 
     suspend fun searchProducts(call: ApplicationCall) {
         val query = call.request.queryParameters["q"] ?: ""
-        val products = productRepository.search(query).map { it.withFullImageUrl(call) }
-        call.respond(DataResponse("success", "Hasil pencarian", products))
+        val products = productRepository.search(query).map { it.withImageUrl(call) }
+        call.respond(DataResponse("success", "Hasil pencarian", mapOf("products" to products)))
     }
 
     suspend fun scanBarcode(call: ApplicationCall) {
         val barcode = call.request.queryParameters["barcode"] ?: throw AppException(400, "Barcode diperlukan")
-        val product = productRepository.getByBarcode(barcode)?.withFullImageUrl(call) ?: throw AppException(404, "Produk tidak ditemukan")
-        call.respond(DataResponse("success", "Produk ditemukan", product))
+        val product = productRepository.getByBarcode(barcode)?.withImageUrl(call) ?: throw AppException(404, "Produk tidak ditemukan")
+        call.respond(DataResponse("success", "Produk ditemukan", mapOf("product" to product)))
     }
 
     suspend fun getSellerProducts(call: ApplicationCall) {
         val principal = call.principal<JWTPrincipal>()
         val sellerId = principal?.payload?.getClaim("userId")?.asString() ?: throw AppException(401, "Unauthorized")
         
-        val products = productRepository.getBySeller(sellerId).map { it.withFullImageUrl(call) }
-        call.respond(DataResponse("success", "Produk penjual", products))
+        val products = productRepository.getBySeller(sellerId).map { it.withImageUrl(call) }
+        call.respond(DataResponse("success", "Produk penjual", mapOf("products" to products)))
     }
 
     suspend fun createProduct(call: ApplicationCall) {
@@ -191,18 +192,29 @@ class ProductService(
         }
     }
 
-    private fun Product.withFullImageUrl(call: ApplicationCall): Product {
+    suspend fun getProductImage(call: ApplicationCall) {
+        val id = call.parameters["id"] ?: throw AppException(400, "ID produk diperlukan")
+        val product = productRepository.getById(id) ?: throw AppException(404, "Produk tidak ditemukan")
+
+        if (product.image == null) {
+            throw AppException(404, "Produk belum memiliki gambar")
+        }
+
+        val file = File(product.image!!)
+        if (!file.exists()) {
+            throw AppException(404, "File gambar tidak ditemukan")
+        }
+
+        call.respondFile(file)
+    }
+
+    private fun Product.withImageUrl(call: ApplicationCall): Product {
         if (image == null) return this
-        
-        // Menggunakan host dan port dari request origin agar dinamis mengikuti IP pemanggil
         val host = call.request.host()
         val port = call.request.port()
         val scheme = call.request.local.scheme
-        
-        if (image!!.startsWith("http")) return this
-        
-        val cleanPath = image!!.removePrefix("/")
-        val fullUrl = "$scheme://$host:$port/$cleanPath"
+        // Generate URL ke endpoint khusus gambar agar stabil
+        val fullUrl = "$scheme://$host:$port/products/image/$id"
         return this.copy(image = fullUrl)
     }
 }

@@ -88,6 +88,7 @@ fun Application.configureRouting() {
                 get { productService.getAllProducts(call) }
                 get("/search") { productService.searchProducts(call) }
                 get("/scan") { productService.scanBarcode(call) }
+                get("/image/{id}") { productService.getProductImage(call) } // Endpoint khusus gambar
                 get("/{id}") { productService.getProductById(call) }
 
                 // Seller Only
