@@ -6,12 +6,14 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.http.content.*
 import org.delcom.data.AppException
 import org.delcom.data.ErrorResponse
 import org.delcom.helpers.JWTConstants
 import org.delcom.helpers.parseMessageToMap
 import org.delcom.services.*
 import org.koin.ktor.ext.inject
+import java.io.File
 
 fun Application.configureRouting() {
     val authService: AuthService by inject()
@@ -56,12 +58,16 @@ fun Application.configureRouting() {
             post("/logout") { authService.postLogout(call) }
         }
 
+        // Static files access for images
+        staticFiles("/uploads", File("uploads"))
+
         authenticate(JWTConstants.NAME) {
             route("/users") {
                 get("/me") { userService.getMe(call) }
                 put("/me") { userService.putMe(call) }
                 put("/me/password") { userService.putMyPassword(call) }
                 put("/me/photo") { userService.putMyPhoto(call) }
+                get("/photo/{id}") { userService.getPhoto(call) }
             }
 
             // Fitur Wallet & Transaksi
