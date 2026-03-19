@@ -193,15 +193,16 @@ class ProductService(
 
     private fun Product.withFullImageUrl(call: ApplicationCall): Product {
         if (image == null) return this
-        val host = call.request.local.localHost
-        val port = call.request.local.localPort
+        
+        // Menggunakan host dan port dari request origin agar dinamis mengikuti IP pemanggil
+        val host = call.request.host()
+        val port = call.request.port()
         val scheme = call.request.local.scheme
         
-        // Jika image sudah berupa URL (misal http://...), jangan ubah
         if (image!!.startsWith("http")) return this
         
-        // Ubah "uploads/products/xyz.jpg" menjadi "http://host:port/uploads/products/xyz.jpg"
-        val fullUrl = "$scheme://$host:$port/$image"
+        val cleanPath = image!!.removePrefix("/")
+        val fullUrl = "$scheme://$host:$port/$cleanPath"
         return this.copy(image = fullUrl)
     }
 }
