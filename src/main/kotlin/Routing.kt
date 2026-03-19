@@ -64,6 +64,18 @@ fun Application.configureRouting() {
                 put("/me/photo") { userService.putMyPhoto(call) }
             }
 
+            // Fitur Wallet & Transaksi
+            route("/wallet") {
+                post("/deposit") { transactionService.deposit(call) }
+            }
+
+            route("/transactions") {
+                post("/checkout") { transactionService.checkout(call) }
+                get("/buyer") { transactionService.getBuyerTransactions(call) }
+                get("/seller") { transactionService.getSellerTransactions(call) }
+                get("/seller/income") { transactionService.getSellerIncome(call) }
+            }
+
             // Fitur Produk (Buyer & Seller)
             route("/products") {
                 get { productService.getAllProducts(call) }
@@ -71,7 +83,7 @@ fun Application.configureRouting() {
                 get("/scan") { productService.scanBarcode(call) }
                 get("/{id}") { productService.getProductById(call) }
 
-                // Seller Only (Harusnya ada check role, tapi dipermudah di service)
+                // Seller Only
                 post { productService.createProduct(call) }
                 put("/{id}") { productService.updateProduct(call) }
                 delete("/{id}") { productService.deleteProduct(call) }
@@ -84,13 +96,6 @@ fun Application.configureRouting() {
                 post { cartService.addToCart(call) }
                 put("/{id}") { cartService.updateQuantity(call) }
                 delete("/{id}") { cartService.removeFromCart(call) }
-            }
-
-            // Fitur Transaksi & Pembayaran
-            route("/transactions") {
-                post("/checkout") { transactionService.checkout(call) }
-                get("/buyer") { transactionService.getBuyerTransactions(call) }
-                get("/seller/income") { transactionService.getSellerIncome(call) }
             }
         }
     }

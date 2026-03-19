@@ -20,6 +20,7 @@ import org.delcom.helpers.verifyPassword
 import org.delcom.repositories.IRefreshTokenRepository
 import org.delcom.repositories.IUserRepository
 import java.util.*
+import kotlin.random.Random
 
 class AuthService(
     private val jwtSecret: String,
@@ -48,7 +49,12 @@ class AuthService(
         }
 
         request.password = hashPassword(request.password)
-        val userId = userRepository.create(request.toEntity())
+        val userEntity = request.toEntity()
+        
+        // Generate Wallet Code (Unique 8 digits)
+        userEntity.walletCode = (1..8).map { Random.nextInt(0, 10) }.joinToString("")
+        
+        val userId = userRepository.create(userEntity)
 
         val response = DataResponse(
             "success",
@@ -196,63 +202,5 @@ class AuthService(
             null,
         )
         call.respond(response)
-    }
-
-    // --- FITUR BARU: PROFIL & MANAJEMEN AKUN ---
-
-    suspend fun getProfile(call: ApplicationCall) {
-        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
-            ?: throw AppException(401, "Unauthorized")
-
-        val user = userRepository.getById(userId) ?: throw AppException(404, "User not found")
-        
-        call.respond(DataResponse("success", "Profil berhasil diambil", user))
-    }
-
-    suspend fun updateProfile(call: ApplicationCall) {
-        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
-            ?: throw AppException(401, "Unauthorized")
-            
-        val request = call.receive<AuthRequest>()
-        val user = userRepository.getById(userId) ?: throw AppException(404, "User not found")
-
-        // Update Field (Jika dikirim)
-        if (request.name.isNotBlank()) user.name = request.name
-        if (request.username.isNotBlank() && request.username != user.username) {
-            // Cek keunikan username baru
-            if (userRepository.getByUsername(request.username) != null) {
-                throw AppException(409, "Username sudah digunakan")
-            }
-            user.username = request.username
-        }
-        if (request.bio != null) user.bio = request.bio
-        
-        user.updatedAt = Clock.System.now()
-        userRepository.update(userId, user)
-        
-        call.respond(DataResponse("success", "Profil berhasil diperbarui", null))
-    }
-
-    suspend fun changePassword(call: ApplicationCall) {
-        val userId = call.principal<JWTPrincipal>()?.payload?.getClaim("userId")?.asString()
-            ?: throw AppException(401, "Unauthorized")
-            
-        val request = call.receive<AuthRequest>()
-        val user = userRepository.getById(userId) ?: throw AppException(404, "User not found")
-
-        // Validasi password lama
-        if (!verifyPassword(request.password, user.password)) {
-            throw AppException(400, "Password lama salah")
-        }
-
-        if (request.newPassword.isBlank()) {
-            throw AppException(400, "Password baru tidak boleh kosong")
-        }
-
-        user.password = hashPassword(request.newPassword)
-        user.updatedAt = Clock.System.now()
-        userRepository.update(userId, user)
-
-        call.respond(DataResponse("success", "Password berhasil diubah", null))
     }
 }

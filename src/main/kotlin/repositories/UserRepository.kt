@@ -35,6 +35,7 @@ class UserRepository : IUserRepository {
             photo = user.photo
             bio = user.bio
             balance = user.balance
+            walletCode = user.walletCode
             createdAt = user.createdAt
             updatedAt = user.updatedAt
         }
@@ -56,6 +57,7 @@ class UserRepository : IUserRepository {
             userDAO.photo = newUser.photo
             userDAO.bio = newUser.bio
             userDAO.balance = newUser.balance
+            userDAO.walletCode = newUser.walletCode
             userDAO.updatedAt = newUser.updatedAt
             true
         } else {
