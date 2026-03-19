@@ -12,6 +12,7 @@ data class UserResponse(
     var role: String = "BUYER",
     var photo: String? = null,
     var bio: String? = null,
+    var balance: Double = 0.0,
     var createdAt: Instant = Clock.System.now(),
     var updatedAt: Instant = Clock.System.now(),
 )

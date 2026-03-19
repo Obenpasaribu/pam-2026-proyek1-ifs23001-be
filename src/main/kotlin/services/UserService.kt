@@ -41,6 +41,7 @@ class UserService(
                     role = user.role.name,
                     photo = user.photo,
                     bio = user.bio,
+                    balance = user.balance,
                     createdAt = user.createdAt,
                     updatedAt = user.updatedAt,
                 ),

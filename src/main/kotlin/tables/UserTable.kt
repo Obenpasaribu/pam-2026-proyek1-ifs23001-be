@@ -10,6 +10,7 @@ object UserTable : UUIDTable("users") {
     val role = varchar("role", 20).default("BUYER")
     val photo = varchar("photo", 255).nullable()
     val bio = text("bio").nullable()
+    val balance = double("balance").default(0.0)
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")
 }

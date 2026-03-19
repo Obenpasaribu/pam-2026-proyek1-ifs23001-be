@@ -60,6 +60,8 @@ fun Application.configureRouting() {
             route("/users") {
                 get("/me") { userService.getMe(call) }
                 put("/me") { userService.putMe(call) }
+                put("/me/password") { userService.putMyPassword(call) }
+                put("/me/photo") { userService.putMyPhoto(call) }
             }
 
             // Fitur Produk (Buyer & Seller)

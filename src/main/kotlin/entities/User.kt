@@ -20,6 +20,7 @@ data class User(
     var role: UserRole = UserRole.BUYER,
     var photo: String? = null,
     var bio: String? = null,
+    var balance: Double = 0.0,
 
     @Contextual
     val createdAt: Instant = Clock.System.now(),
