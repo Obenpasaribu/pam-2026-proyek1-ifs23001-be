@@ -1,5 +1,6 @@
 package org.delcom.services
 
+import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -12,6 +13,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.delcom.data.AppException
 import org.delcom.data.DataResponse
+import org.delcom.data.ErrorResponse
 import org.delcom.entities.Product
 import org.delcom.repositories.IProductRepository
 import java.io.File
@@ -80,7 +82,7 @@ class ProductService(
                     val ext = part.originalFileName?.substringAfterLast('.', "")?.let { if (it.isNotEmpty()) ".$it" else "" } ?: ""
                     val fileName = UUID.randomUUID().toString() + ext
                     val filePath = "uploads/products/$fileName"
-
+                    
                     withContext(Dispatchers.IO) {
                         val file = File(filePath)
                         file.parentFile.mkdirs()
@@ -139,12 +141,12 @@ class ProductService(
                     val ext = part.originalFileName?.substringAfterLast('.', "")?.let { if (it.isNotEmpty()) ".$it" else "" } ?: ""
                     val fileName = UUID.randomUUID().toString() + ext
                     val filePath = "uploads/products/$fileName"
-
+                    
                     withContext(Dispatchers.IO) {
                         val file = File(filePath)
                         file.parentFile.mkdirs()
                         part.provider().copyAndClose(file.writeChannel())
-
+                        
                         // Hapus file lama jika ada
                         imagePath?.let { File(it).delete() }
                         imagePath = filePath
@@ -165,7 +167,7 @@ class ProductService(
             this.image = imagePath
             this.updatedAt = kotlinx.datetime.Clock.System.now()
         }
-
+        
         val success = productRepository.update(id, updatedProduct)
         if (success) {
             call.respond(DataResponse("success", "Berhasil memperbarui produk", null))
@@ -177,7 +179,7 @@ class ProductService(
     suspend fun deleteProduct(call: ApplicationCall) {
         val id = call.parameters["id"] ?: throw AppException(400, "ID produk diperlukan")
         val product = productRepository.getById(id)
-
+        
         val success = productRepository.delete(id)
         if (success) {
             // Hapus file image dari disk
@@ -194,7 +196,7 @@ class ProductService(
         if (file.exists()) {
             call.respondFile(file)
         } else {
-            call.respond(HttpStatusCode.NotFound)
+            call.respond(HttpStatusCode.NotFound, ErrorResponse("fail", "File not found", null))
         }
     }
 }
