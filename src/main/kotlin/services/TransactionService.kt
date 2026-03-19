@@ -30,7 +30,6 @@ class TransactionService(
         val request = call.receive<Transaction>()
         request.buyerId = user.id
         
-        // Periksa produk dan stok
         val product = productRepository.getById(request.productId) ?: throw AppException(404, "Produk tidak ditemukan")
         if (product.stock < request.quantity) {
             throw AppException(400, "Stok tidak mencukupi")
@@ -38,32 +37,32 @@ class TransactionService(
         
         val totalPayment = product.price * request.quantity
         
-        // VALIDASI WALLET & SALDO (Gunakan balance untuk Buyer)
         if (user.balance < totalPayment) {
             throw AppException(400, "Saldo tidak mencukupi. Silakan top up.")
         }
 
-        // Potong Saldo Buyer (balance)
+        // 1. Potong Saldo Buyer
         user.balance -= totalPayment
         userRepository.update(user.id, user)
 
-        // Tambah Saldo Seller (sellerBalance)
+        // 2. Tambah Saldo Seller (Gunakan sellerBalance secara eksplisit)
         val seller = userRepository.getById(product.sellerId)
         if (seller != null) {
             seller.sellerBalance += totalPayment
             userRepository.update(seller.id, seller)
         }
         
-        // Update stok produk
+        // 3. Update stok produk
         product.stock -= request.quantity
         productRepository.update(product.id, product)
         
-        // Simpan transaksi
+        // 4. Simpan transaksi
         request.sellerId = product.sellerId
         request.totalPrice = totalPayment
+        request.status = "SUCCESS"
         
         val transactionId = transactionRepository.create(request)
-        call.respond(DataResponse("success", "Pembayaran menggunakan Wallet berhasil", mapOf("id" to transactionId)))
+        call.respond(DataResponse("success", "Pembayaran Berhasil! Saldo Seller telah bertambah.", mapOf("id" to transactionId)))
     }
 
     suspend fun bulkCheckout(call: ApplicationCall) {
@@ -79,7 +78,7 @@ class TransactionService(
 
         for (item in cartItems) {
             val product = productRepository.getById(item.productId) 
-                ?: throw AppException(404, "Produk ${item.productId} tidak ditemukan")
+                ?: throw AppException(404, "Produk tidak ditemukan")
             
             if (product.stock < item.quantity) {
                 throw AppException(400, "Stok produk '${product.name}' tidak mencukupi")
@@ -116,7 +115,8 @@ class TransactionService(
                 sellerId = product.sellerId,
                 productId = product.id,
                 quantity = quantity,
-                totalPrice = amount
+                totalPrice = amount,
+                status = "SUCCESS"
             ))
 
             cartRepository.removeFromCart(cartId)
@@ -127,7 +127,6 @@ class TransactionService(
 
     suspend fun deposit(call: ApplicationCall) {
         val user = ServiceHelper.getAuthUser(call, userRepository)
-        
         val request = try {
             call.receive<DepositRequest>()
         } catch (e: Exception) {
@@ -138,13 +137,9 @@ class TransactionService(
         if (amount <= 0) throw AppException(400, "Jumlah deposit harus lebih dari 0")
         
         user.balance += amount
-        val isUpdated = userRepository.update(user.id, user)
+        userRepository.update(user.id, user)
         
-        if (!isUpdated) {
-            throw AppException(500, "Gagal memperbarui saldo di database")
-        }
-        
-        call.respond(DataResponse("success", "Berhasil melakukan deposit sebesar Rp $amount", null))
+        call.respond(DataResponse("success", "Berhasil melakukan deposit", user.balance))
     }
 
     suspend fun getBuyerTransactions(call: ApplicationCall) {
@@ -168,16 +163,10 @@ class TransactionService(
         val sellerId = principal?.payload?.getClaim("userId")?.asString() ?: throw AppException(401, "Unauthorized")
         
         val transactions = transactionRepository.getIncomeBySeller(sellerId)
-        
-        val chartData = transactions.map { 
-            mapOf("date" to it.createdAt.toString(), "amount" to it.totalPrice)
-        }
-        
         val totalIncome = transactions.sumOf { it.totalPrice }
         
         call.respond(DataResponse("success", "Info pemasukan penjual", mapOf(
-            "totalIncome" to totalIncome,
-            "chartData" to chartData
+            "totalIncome" to totalIncome
         )))
     }
 }
