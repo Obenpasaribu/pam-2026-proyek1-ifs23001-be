@@ -5,15 +5,16 @@ import org.delcom.entities.Transaction
 import org.delcom.helpers.suspendTransaction
 import org.delcom.helpers.transactionDAOToModel
 import org.delcom.tables.TransactionTable
-import org.jetbrains.exposed.sql.UUIDColumnType
-import org.jetbrains.exposed.sql.alias
-import org.jetbrains.exposed.sql.castTo
-import org.jetbrains.exposed.sql.sum
 import java.util.*
 
 class TransactionRepository : ITransactionRepository {
     override suspend fun getByBuyer(buyerId: String): List<Transaction> = suspendTransaction {
         TransactionDAO.find { TransactionTable.buyerId eq UUID.fromString(buyerId) }
+            .map { transactionDAOToModel(it) }
+    }
+
+    override suspend fun getBySeller(sellerId: String): List<Transaction> = suspendTransaction {
+        TransactionDAO.find { TransactionTable.sellerId eq UUID.fromString(sellerId) }
             .map { transactionDAOToModel(it) }
     }
 
