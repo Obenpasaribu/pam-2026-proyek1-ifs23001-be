@@ -1,6 +1,5 @@
 package org.delcom.services
 
-import io.ktor.http.*
 import io.ktor.http.content.*
 import io.ktor.server.application.*
 import io.ktor.server.request.*
@@ -13,7 +12,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.delcom.data.AppException
 import org.delcom.data.DataResponse
-import org.delcom.data.ErrorResponse
 import org.delcom.entities.Product
 import org.delcom.repositories.IProductRepository
 import java.io.File
@@ -23,25 +21,25 @@ class ProductService(
     private val productRepository: IProductRepository
 ) {
     suspend fun getAllProducts(call: ApplicationCall) {
-        val products = productRepository.getAll()
+        val products = productRepository.getAll().map { it.withFullImageUrl(call) }
         call.respond(DataResponse("success", "Berhasil mengambil produk", products))
     }
 
     suspend fun getProductById(call: ApplicationCall) {
         val id = call.parameters["id"] ?: throw AppException(400, "ID produk diperlukan")
-        val product = productRepository.getById(id) ?: throw AppException(404, "Produk tidak ditemukan")
+        val product = productRepository.getById(id)?.withFullImageUrl(call) ?: throw AppException(404, "Produk tidak ditemukan")
         call.respond(DataResponse("success", "Berhasil mengambil produk", product))
     }
 
     suspend fun searchProducts(call: ApplicationCall) {
         val query = call.request.queryParameters["q"] ?: ""
-        val products = productRepository.search(query)
+        val products = productRepository.search(query).map { it.withFullImageUrl(call) }
         call.respond(DataResponse("success", "Hasil pencarian", products))
     }
 
     suspend fun scanBarcode(call: ApplicationCall) {
         val barcode = call.request.queryParameters["barcode"] ?: throw AppException(400, "Barcode diperlukan")
-        val product = productRepository.getByBarcode(barcode) ?: throw AppException(404, "Produk tidak ditemukan")
+        val product = productRepository.getByBarcode(barcode)?.withFullImageUrl(call) ?: throw AppException(404, "Produk tidak ditemukan")
         call.respond(DataResponse("success", "Produk ditemukan", product))
     }
 
@@ -49,7 +47,7 @@ class ProductService(
         val principal = call.principal<JWTPrincipal>()
         val sellerId = principal?.payload?.getClaim("userId")?.asString() ?: throw AppException(401, "Unauthorized")
         
-        val products = productRepository.getBySeller(sellerId)
+        val products = productRepository.getBySeller(sellerId).map { it.withFullImageUrl(call) }
         call.respond(DataResponse("success", "Produk penjual", products))
     }
 
@@ -148,7 +146,10 @@ class ProductService(
                         part.provider().copyAndClose(file.writeChannel())
                         
                         // Hapus file lama jika ada
-                        imagePath?.let { File(it).delete() }
+                        imagePath?.let { 
+                            val oldFile = File(it)
+                            if (oldFile.exists()) oldFile.delete() 
+                        }
                         imagePath = filePath
                     }
                 }
@@ -190,13 +191,17 @@ class ProductService(
         }
     }
 
-    suspend fun getProductImage(call: ApplicationCall) {
-        val fileName = call.parameters["fileName"] ?: throw AppException(400, "File name diperlukan")
-        val file = File("uploads/products/$fileName")
-        if (file.exists()) {
-            call.respondFile(file)
-        } else {
-            call.respond(HttpStatusCode.NotFound, ErrorResponse("fail", "File not found", null))
-        }
+    private fun Product.withFullImageUrl(call: ApplicationCall): Product {
+        if (image == null) return this
+        val host = call.request.local.localHost
+        val port = call.request.local.localPort
+        val scheme = call.request.local.scheme
+        
+        // Jika image sudah berupa URL (misal http://...), jangan ubah
+        if (image!!.startsWith("http")) return this
+        
+        // Ubah "uploads/products/xyz.jpg" menjadi "http://host:port/uploads/products/xyz.jpg"
+        val fullUrl = "$scheme://$host:$port/$image"
+        return this.copy(image = fullUrl)
     }
 }
