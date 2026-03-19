@@ -17,6 +17,8 @@ fun userDAOToModel(dao: UserDAO) = User(
     role = UserRole.valueOf(dao.role),
     photo = dao.photo,
     bio = dao.bio,
+    balance = dao.balance,
+    walletCode = dao.walletCode,
     createdAt = dao.createdAt,
     updatedAt = dao.updatedAt
 )
