@@ -51,7 +51,7 @@ fun appModule(jwtSecret: String) = module {
         TransactionRepository()
     }
     single {
-        TransactionService(get(), get())
+        TransactionService(get(), get(), get())
     }
 
     // Todo (Keeping for compatibility or can be removed)
