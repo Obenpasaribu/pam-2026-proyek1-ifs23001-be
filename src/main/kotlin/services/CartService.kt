@@ -24,21 +24,40 @@ class CartService(
 
     suspend fun addToCart(call: ApplicationCall) {
         val principal = call.principal<JWTPrincipal>()
-        // Mengambil userId dari claim 'userId' sesuai dengan yang ada di AuthService
         val userId = principal?.payload?.getClaim("userId")?.asString() ?: throw AppException(401, "Unauthorized")
         
         val request = call.receive<Cart>()
-        // Memastikan userId diisi dari token, bukan dari body request
         request.userId = userId
         
-        val cartId = cartRepository.addToCart(request)
-        call.respond(DataResponse("success", "Berhasil menambah ke keranjang", cartId))
+        // Cek jika produk sudah ada di keranjang, maka update quantity saja
+        val existingCarts = cartRepository.getByUser(userId)
+        val existingItem = existingCarts.find { it.productId == request.productId }
+        
+        if (existingItem != null) {
+            val newQuantity = existingItem.quantity + request.quantity
+            cartRepository.updateQuantity(existingItem.id, newQuantity)
+            call.respond(DataResponse("success", "Kuantitas produk diperbarui", existingItem.id))
+        } else {
+            val cartId = cartRepository.addToCart(request)
+            call.respond(DataResponse("success", "Berhasil menambah ke keranjang", cartId))
+        }
     }
 
     suspend fun updateQuantity(call: ApplicationCall) {
         val id = call.parameters["id"] ?: throw AppException(400, "ID keranjang diperlukan")
         val request = call.receive<Map<String, Int>>()
         val quantity = request["quantity"] ?: throw AppException(400, "Quantity diperlukan")
+        
+        // LOGIKA TERBAIK: Jika quantity <= 0, hapus item dari keranjang
+        if (quantity <= 0) {
+            val success = cartRepository.removeFromCart(id)
+            if (success) {
+                call.respond(DataResponse("success", "Item dihapus karena kuantitas 0", null))
+            } else {
+                throw AppException(404, "Item keranjang tidak ditemukan")
+            }
+            return
+        }
         
         val success = cartRepository.updateQuantity(id, quantity)
         if (success) {
