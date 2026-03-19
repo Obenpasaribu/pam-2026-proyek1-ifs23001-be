@@ -71,6 +71,7 @@ fun Application.configureRouting() {
 
             route("/transactions") {
                 post("/checkout") { transactionService.checkout(call) }
+                post("/bulk-checkout") { transactionService.bulkCheckout(call) }
                 get("/buyer") { transactionService.getBuyerTransactions(call) }
                 get("/seller") { transactionService.getSellerTransactions(call) }
                 get("/seller/income") { transactionService.getSellerIncome(call) }

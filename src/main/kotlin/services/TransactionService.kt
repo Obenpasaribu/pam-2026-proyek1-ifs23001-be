@@ -10,9 +10,7 @@ import org.delcom.data.AppException
 import org.delcom.data.DataResponse
 import org.delcom.entities.Transaction
 import org.delcom.helpers.ServiceHelper
-import org.delcom.repositories.ITransactionRepository
-import org.delcom.repositories.IProductRepository
-import org.delcom.repositories.IUserRepository
+import org.delcom.repositories.*
 import java.util.*
 
 @Serializable
@@ -23,7 +21,8 @@ data class DepositRequest(
 class TransactionService(
     private val transactionRepository: ITransactionRepository,
     private val productRepository: IProductRepository,
-    private val userRepository: IUserRepository
+    private val userRepository: IUserRepository,
+    private val cartRepository: ICartRepository
 ) {
     suspend fun checkout(call: ApplicationCall) {
         val user = ServiceHelper.getAuthUser(call, userRepository)
@@ -67,10 +66,76 @@ class TransactionService(
         call.respond(DataResponse("success", "Pembayaran menggunakan Wallet berhasil", mapOf("id" to transactionId)))
     }
 
+    suspend fun bulkCheckout(call: ApplicationCall) {
+        val user = ServiceHelper.getAuthUser(call, userRepository)
+        
+        // 1. Ambil semua item di keranjang
+        val cartItems = cartRepository.getByUser(user.id)
+        if (cartItems.isEmpty()) {
+            throw AppException(400, "Keranjang Anda kosong")
+        }
+
+        var totalPayment = 0.0
+        val itemsToProcess = mutableListOf<Triple<org.delcom.entities.Product, Int, String>>() // Product, Quantity, CartId
+
+        // 2. Validasi stok dan hitung total harga
+        for (item in cartItems) {
+            val product = productRepository.getById(item.productId) 
+                ?: throw AppException(404, "Produk ${item.productId} tidak ditemukan")
+            
+            if (product.stock < item.quantity) {
+                throw AppException(400, "Stok produk '${product.name}' tidak mencukupi")
+            }
+            
+            totalPayment += product.price * item.quantity
+            itemsToProcess.add(Triple(product, item.quantity, item.id))
+        }
+
+        // 3. Validasi saldo user
+        if (user.balance < totalPayment) {
+            throw AppException(400, "Saldo tidak mencukupi. Total: Rp $totalPayment")
+        }
+
+        // 4. Proses Transaksi (Potong saldo, update stok, simpan transaksi, hapus keranjang)
+        user.balance -= totalPayment
+        userRepository.update(user.id, user)
+
+        for (item in itemsToProcess) {
+            val product = item.first
+            val quantity = item.second
+            val cartId = item.third
+            val amount = product.price * quantity
+
+            // Tambah Saldo Seller
+            val seller = userRepository.getById(product.sellerId)
+            if (seller != null) {
+                seller.balance += amount
+                userRepository.update(seller.id, seller)
+            }
+
+            // Update stok produk
+            product.stock -= quantity
+            productRepository.update(product.id, product)
+
+            // Simpan transaksi
+            transactionRepository.create(Transaction(
+                buyerId = user.id,
+                sellerId = product.sellerId,
+                productId = product.id,
+                quantity = quantity,
+                totalPrice = amount
+            ))
+
+            // Hapus dari keranjang
+            cartRepository.removeFromCart(cartId)
+        }
+
+        call.respond(DataResponse("success", "Checkout Keranjang Berhasil!", "Total: Rp $totalPayment"))
+    }
+
     suspend fun deposit(call: ApplicationCall) {
         val user = ServiceHelper.getAuthUser(call, userRepository)
         
-        // Menggunakan Data Class untuk menghindari error casting Map
         val request = try {
             call.receive<DepositRequest>()
         } catch (e: Exception) {
@@ -80,7 +145,6 @@ class TransactionService(
         val amount = request.amount
         if (amount <= 0) throw AppException(400, "Jumlah deposit harus lebih dari 0")
         
-        // Update Saldo
         user.balance += amount
         val isUpdated = userRepository.update(user.id, user)
         
