@@ -14,6 +14,7 @@ data class Transaction(
     var productId: String,
     var quantity: Int,
     var totalPrice: Double,
+    var status: String = "SUCCESS",
     
     @Contextual
     val createdAt: Instant = Clock.System.now(),

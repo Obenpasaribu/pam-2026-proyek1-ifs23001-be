@@ -11,6 +11,7 @@ object UserTable : UUIDTable("users") {
     val photo = varchar("photo", 255).nullable()
     val bio = text("bio").nullable()
     val balance = double("balance").default(0.0)
+    val sellerBalance = double("seller_balance").default(0.0)
     val walletCode = varchar("wallet_code", 10).nullable().uniqueIndex()
     val createdAt = timestamp("created_at")
     val updatedAt = timestamp("updated_at")

@@ -21,6 +21,7 @@ data class User(
     var photo: String? = null,
     var bio: String? = null,
     var balance: Double = 0.0,
+    var sellerBalance: Double = 0.0,
     var walletCode: String? = null,
 
     @Contextual

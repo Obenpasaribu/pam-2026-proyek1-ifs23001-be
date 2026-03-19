@@ -14,5 +14,6 @@ class TransactionDAO(id: EntityID<UUID>) : Entity<UUID>(id) {
     var productId by TransactionTable.productId
     var quantity by TransactionTable.quantity
     var totalPrice by TransactionTable.totalPrice
+    var status by TransactionTable.status
     var createdAt by TransactionTable.createdAt
 }

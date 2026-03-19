@@ -18,6 +18,7 @@ fun userDAOToModel(dao: UserDAO) = User(
     photo = dao.photo,
     bio = dao.bio,
     balance = dao.balance,
+    sellerBalance = dao.sellerBalance,
     walletCode = dao.walletCode,
     createdAt = dao.createdAt,
     updatedAt = dao.updatedAt
@@ -84,6 +85,7 @@ fun transactionDAOToModel(dao: TransactionDAO) = Transaction(
     productId = dao.productId.toString(),
     quantity = dao.quantity,
     totalPrice = dao.totalPrice,
+    status = dao.status,
     createdAt = dao.createdAt
 )
 

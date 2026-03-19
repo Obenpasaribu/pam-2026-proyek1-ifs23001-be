@@ -38,19 +38,19 @@ class TransactionService(
         
         val totalPayment = product.price * request.quantity
         
-        // VALIDASI WALLET & SALDO
+        // VALIDASI WALLET & SALDO (Gunakan balance untuk Buyer)
         if (user.balance < totalPayment) {
             throw AppException(400, "Saldo tidak mencukupi. Silakan top up.")
         }
 
-        // Potong Saldo Buyer
+        // Potong Saldo Buyer (balance)
         user.balance -= totalPayment
         userRepository.update(user.id, user)
 
-        // Tambah Saldo Seller
+        // Tambah Saldo Seller (sellerBalance)
         val seller = userRepository.getById(product.sellerId)
         if (seller != null) {
-            seller.balance += totalPayment
+            seller.sellerBalance += totalPayment
             userRepository.update(seller.id, seller)
         }
         
@@ -69,16 +69,14 @@ class TransactionService(
     suspend fun bulkCheckout(call: ApplicationCall) {
         val user = ServiceHelper.getAuthUser(call, userRepository)
         
-        // 1. Ambil semua item di keranjang
         val cartItems = cartRepository.getByUser(user.id)
         if (cartItems.isEmpty()) {
             throw AppException(400, "Keranjang Anda kosong")
         }
 
         var totalPayment = 0.0
-        val itemsToProcess = mutableListOf<Triple<org.delcom.entities.Product, Int, String>>() // Product, Quantity, CartId
+        val itemsToProcess = mutableListOf<Triple<org.delcom.entities.Product, Int, String>>()
 
-        // 2. Validasi stok dan hitung total harga
         for (item in cartItems) {
             val product = productRepository.getById(item.productId) 
                 ?: throw AppException(404, "Produk ${item.productId} tidak ditemukan")
@@ -91,12 +89,10 @@ class TransactionService(
             itemsToProcess.add(Triple(product, item.quantity, item.id))
         }
 
-        // 3. Validasi saldo user
         if (user.balance < totalPayment) {
             throw AppException(400, "Saldo tidak mencukupi. Total: Rp $totalPayment")
         }
 
-        // 4. Proses Transaksi (Potong saldo, update stok, simpan transaksi, hapus keranjang)
         user.balance -= totalPayment
         userRepository.update(user.id, user)
 
@@ -106,18 +102,15 @@ class TransactionService(
             val cartId = item.third
             val amount = product.price * quantity
 
-            // Tambah Saldo Seller
             val seller = userRepository.getById(product.sellerId)
             if (seller != null) {
-                seller.balance += amount
+                seller.sellerBalance += amount
                 userRepository.update(seller.id, seller)
             }
 
-            // Update stok produk
             product.stock -= quantity
             productRepository.update(product.id, product)
 
-            // Simpan transaksi
             transactionRepository.create(Transaction(
                 buyerId = user.id,
                 sellerId = product.sellerId,
@@ -126,7 +119,6 @@ class TransactionService(
                 totalPrice = amount
             ))
 
-            // Hapus dari keranjang
             cartRepository.removeFromCart(cartId)
         }
 

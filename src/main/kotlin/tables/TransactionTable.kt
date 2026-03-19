@@ -10,5 +10,6 @@ object TransactionTable : UUIDTable("transactions") {
     val productId = uuid("product_id").references(ProductTable.id, onDelete = ReferenceOption.CASCADE)
     val quantity = integer("quantity")
     val totalPrice = double("total_price")
+    val status = varchar("status", 20).default("SUCCESS")
     val createdAt = timestamp("created_at")
 }

@@ -13,6 +13,7 @@ data class UserResponse(
     var photo: String? = null,
     var bio: String? = null,
     var balance: Double = 0.0,
+    var sellerBalance: Double = 0.0,
     var walletCode: String? = null,
     var createdAt: Instant = Clock.System.now(),
     var updatedAt: Instant = Clock.System.now(),
