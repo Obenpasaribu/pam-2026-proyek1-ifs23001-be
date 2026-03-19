@@ -51,8 +51,9 @@ class AuthService(
         request.password = hashPassword(request.password)
         val userEntity = request.toEntity()
         
-        // Generate Wallet Code (Unique 8 digits)
-        userEntity.walletCode = (1..8).map { Random.nextInt(0, 10) }.joinToString("")
+        // Generate Alphanumeric Wallet Code (8 characters) e.g. D1A1E0B9
+        val chars = "0123456789ABCDEF"
+        userEntity.walletCode = (1..8).map { chars[Random.nextInt(chars.length)] }.joinToString("")
         
         val userId = userRepository.create(userEntity)
 
