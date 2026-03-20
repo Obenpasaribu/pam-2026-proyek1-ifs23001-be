@@ -77,6 +77,8 @@ class UserService(
         user.username = request.username
         user.name = request.name
         user.bio = request.bio
+        user.updatedAt = kotlinx.datetime.Clock.System.now() // Update timestamp
+
         val isUpdated = userRepo.update(
             user.id,
             user
@@ -138,6 +140,7 @@ class UserService(
 
         val oldPhoto = user.photo
         user.photo = newPhoto
+        user.updatedAt = kotlinx.datetime.Clock.System.now() // Update timestamp agar URL di getMe berubah
 
         val isUpdated = userRepo.update(
             user.id,
@@ -183,6 +186,8 @@ class UserService(
 
         // buat password baru
         user.password = hashPassword(request.newPassword)
+        user.updatedAt = kotlinx.datetime.Clock.System.now()
+
         val isUpdated = userRepo.update(
             user.id,
             user
@@ -227,7 +232,11 @@ class UserService(
         val port = call.request.port()
         val scheme = call.request.local.scheme
 
-        val fullUrl = "$scheme://$host:$port/users/photo/$id"
+        // Tambahkan query parameter timestamp (t) agar Coil/Glide di front-end
+        // melakukan refresh gambar saat updatedAt berubah.
+        val timestamp = updatedAt.toEpochMilliseconds()
+        val fullUrl = "$scheme://$host:$port/users/photo/$id?t=$timestamp"
+
         return this.copy(photo = fullUrl)
     }
 }
