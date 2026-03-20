@@ -58,8 +58,9 @@ fun Application.configureRouting() {
             post("/logout") { authService.postLogout(call) }
         }
 
-        // Static files access for images
-        staticFiles("/uploads", File("uploads"))
+        // Endpoint Publik untuk Gambar (Agar Coil/Glide bisa akses tanpa Token)
+        get("/users/photo/{id}") { userService.getPhoto(call) }
+        get("/products/image/{id}") { productService.getProductImage(call) }
 
         authenticate(JWTConstants.NAME) {
             route("/users") {
@@ -67,7 +68,6 @@ fun Application.configureRouting() {
                 put("/me") { userService.putMe(call) }
                 put("/me/password") { userService.putMyPassword(call) }
                 put("/me/photo") { userService.putMyPhoto(call) }
-                get("/photo/{id}") { userService.getPhoto(call) }
             }
 
             // Fitur Wallet & Transaksi
@@ -88,7 +88,6 @@ fun Application.configureRouting() {
                 get { productService.getAllProducts(call) }
                 get("/search") { productService.searchProducts(call) }
                 get("/scan") { productService.scanBarcode(call) }
-                get("/image/{id}") { productService.getProductImage(call) } // Endpoint khusus gambar
                 get("/{id}") { productService.getProductById(call) }
 
                 // Seller Only

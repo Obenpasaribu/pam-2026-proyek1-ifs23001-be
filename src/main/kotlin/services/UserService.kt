@@ -13,6 +13,7 @@ import org.delcom.data.AppException
 import org.delcom.data.AuthRequest
 import org.delcom.data.DataResponse
 import org.delcom.data.UserResponse
+import org.delcom.entities.User
 import org.delcom.helpers.ServiceHelper
 import org.delcom.helpers.ValidatorHelper
 import org.delcom.helpers.hashPassword
@@ -29,21 +30,22 @@ class UserService(
     // Mengambil data user yang login saat ini
     suspend fun getMe(call: ApplicationCall) {
         val user = ServiceHelper.getAuthUser(call, userRepo)
+        val userWithUrl = user.withFullPhotoUrl(call)
 
         val response = DataResponse(
             "success",
             "Berhasil mengambil informasi akun saya",
             mapOf(
                 "user" to UserResponse(
-                    id = user.id,
-                    name = user.name,
-                    username = user.username,
-                    role = user.role.name,
-                    photo = user.photo,
-                    bio = user.bio,
-                    balance = user.balance,
-                    createdAt = user.createdAt,
-                    updatedAt = user.updatedAt,
+                    id = userWithUrl.id,
+                    name = userWithUrl.name,
+                    username = userWithUrl.username,
+                    role = userWithUrl.role.name,
+                    photo = userWithUrl.photo,
+                    bio = userWithUrl.bio,
+                    balance = userWithUrl.balance,
+                    createdAt = userWithUrl.createdAt,
+                    updatedAt = userWithUrl.updatedAt,
                 ),
             )
         )
@@ -217,5 +219,15 @@ class UserService(
         }
 
         call.respondFile(file)
+    }
+
+    private fun User.withFullPhotoUrl(call: ApplicationCall): User {
+        if (photo == null) return this
+        val host = call.request.host()
+        val port = call.request.port()
+        val scheme = call.request.local.scheme
+
+        val fullUrl = "$scheme://$host:$port/users/photo/$id"
+        return this.copy(photo = fullUrl)
     }
 }
